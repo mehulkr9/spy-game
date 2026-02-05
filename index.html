@@ -1184,8 +1184,8 @@
     <div class="bg-animation"></div>
 
     <!-- Sound Toggle Button -->
-    <button class="sound-toggle" id="soundToggle" title="Toggle Sound">🔊</button>
-
+    <button class="sound-toggle" id="soundToggle" title="Toggle Sound Effects">🔊</button>
+    
     <!-- ==========================================
          SCREEN 1: HOME / MODE SELECTION
     ========================================== -->
@@ -1194,9 +1194,22 @@
             <h1 class="title">SPY GAME</h1>
             <p class="subtitle">Uncover the spy among you</p>
             
-            <button class="btn btn-primary btn-block" onclick="selectMode('offline')">
-                🎮 Play Game
-            </button>
+            <!-- Buttons shown when no saved game -->
+            <div id="newGameButtons">
+                <button class="btn btn-primary btn-block" onclick="selectMode('offline')">
+                    🎮 Play Game
+                </button>
+            </div>
+            
+            <!-- Buttons shown when saved game exists -->
+            <div id="continueGameButtons" class="hidden">
+                <button class="btn btn-success btn-block" onclick="continueGame()">
+                    ▶️ Continue Game
+                </button>
+                <button class="btn btn-danger btn-block" onclick="startNewGame()">
+                    🔄 New Game
+                </button>
+            </div>
             <!-- <button class="btn btn-secondary btn-block" onclick="selectMode('online')">
                 🌐 Online Multiplayer
             </button> -->
@@ -1431,6 +1444,10 @@
                 <p class="text-muted">Time remaining</p>
             </div>
             
+            <button class="btn btn-primary btn-block mt-20" onclick="showChangeWordModal()">
+                🔄 Change Word
+            </button>
+            
             <button class="btn btn-danger btn-block mt-20" onclick="startVoting()">
                 ⚖️ Start Voting
             </button>
@@ -1555,6 +1572,21 @@
     </div>
 
     <!-- ==========================================
+         CHANGE WORD MODAL
+    ========================================== -->
+    <div class="modal-overlay hidden" id="changeWordModalOverlay">
+        <div class="modal-card">
+            <div class="modal-icon">🔄</div>
+            <h2 class="modal-title">Change Word?</h2>
+            <p class="modal-message">Are you sure you want to change the word? All players will need to see their cards again.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmChangeWord()">Yes</button>
+                <button class="btn btn-glass" onclick="closeChangeWordModal()">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
          CHAT PANEL (Online Mode Only)
     ========================================== -->
     <div class="chat-container hidden" id="chatContainer">
@@ -1670,60 +1702,197 @@
         ];
 
         // ==========================================
-        // DYNAMIC WORD GENERATION SYSTEM
-        // Creates virtually unlimited word pairs from categories
+        // SIMPLE WORD GENERATION SYSTEM
+        // Only common, everyday words that everyone knows
+        // 10000+ unique combinations, never repeats
         // ==========================================
-        const WORD_BANKS = {
-            fruits: ['Apple', 'Banana', 'Orange', 'Mango', 'Grape', 'Lemon', 'Peach', 'Cherry', 'Strawberry', 'Watermelon', 'Pineapple', 'Coconut', 'Papaya', 'Kiwi', 'Plum', 'Pear', 'Guava', 'Melon', 'Fig', 'Date'],
-            animals: ['Dog', 'Cat', 'Lion', 'Tiger', 'Elephant', 'Monkey', 'Bear', 'Wolf', 'Fox', 'Rabbit', 'Horse', 'Cow', 'Sheep', 'Goat', 'Pig', 'Deer', 'Zebra', 'Giraffe', 'Kangaroo', 'Penguin', 'Eagle', 'Owl', 'Parrot', 'Duck', 'Chicken', 'Fish', 'Shark', 'Whale', 'Dolphin', 'Frog', 'Snake', 'Turtle', 'Crab', 'Ant', 'Bee', 'Butterfly', 'Spider', 'Mouse', 'Rat', 'Squirrel'],
-            foods: ['Pizza', 'Burger', 'Pasta', 'Rice', 'Bread', 'Cake', 'Cookie', 'Sandwich', 'Soup', 'Salad', 'Noodles', 'Taco', 'Sushi', 'Curry', 'Steak', 'Chicken', 'Fish', 'Egg', 'Cheese', 'Butter', 'Milk', 'Yogurt', 'Ice Cream', 'Chocolate', 'Candy', 'Chips', 'Popcorn', 'Pancake', 'Waffle', 'Donut'],
-            drinks: ['Water', 'Milk', 'Tea', 'Coffee', 'Juice', 'Soda', 'Lemonade', 'Smoothie', 'Shake', 'Cocoa', 'Cola', 'Sprite', 'Fanta', 'Pepsi'],
-            vehicles: ['Car', 'Bus', 'Truck', 'Bike', 'Motorcycle', 'Train', 'Plane', 'Ship', 'Boat', 'Helicopter', 'Taxi', 'Van', 'Jeep', 'Scooter', 'Tractor', 'Ambulance', 'Rickshaw', 'Bicycle', 'Rocket', 'Submarine'],
-            bodyParts: ['Hand', 'Foot', 'Eye', 'Ear', 'Nose', 'Mouth', 'Head', 'Arm', 'Leg', 'Finger', 'Toe', 'Hair', 'Face', 'Neck', 'Back', 'Chest', 'Knee', 'Elbow', 'Shoulder', 'Stomach'],
-            clothes: ['Shirt', 'Pants', 'Dress', 'Skirt', 'Jacket', 'Coat', 'Sweater', 'Jeans', 'Shorts', 'Sock', 'Shoe', 'Boot', 'Hat', 'Cap', 'Scarf', 'Gloves', 'Tie', 'Belt', 'Watch', 'Ring'],
-            furniture: ['Chair', 'Table', 'Bed', 'Sofa', 'Desk', 'Lamp', 'Mirror', 'Shelf', 'Drawer', 'Cupboard', 'Wardrobe', 'Couch', 'Stool', 'Bench', 'Carpet', 'Curtain', 'Pillow', 'Blanket', 'Mattress', 'Clock'],
-            nature: ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Snow', 'Wind', 'Storm', 'Rainbow', 'Thunder', 'Tree', 'Flower', 'Grass', 'Mountain', 'River', 'Lake', 'Ocean', 'Beach', 'Forest', 'Desert', 'Island', 'Valley', 'Hill', 'Waterfall', 'Cave'],
-            colors: ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Black', 'White', 'Brown', 'Gray', 'Gold', 'Silver', 'Violet', 'Indigo'],
-            sports: ['Football', 'Cricket', 'Tennis', 'Basketball', 'Hockey', 'Golf', 'Swimming', 'Running', 'Boxing', 'Wrestling', 'Badminton', 'Volleyball', 'Baseball', 'Rugby', 'Skating', 'Skiing', 'Surfing', 'Cycling', 'Archery', 'Gymnastics'],
-            professions: ['Doctor', 'Teacher', 'Engineer', 'Lawyer', 'Nurse', 'Pilot', 'Chef', 'Artist', 'Singer', 'Actor', 'Writer', 'Driver', 'Farmer', 'Soldier', 'Police', 'Fireman', 'Dentist', 'Barber', 'Tailor', 'Baker', 'Butcher', 'Painter', 'Plumber', 'Mechanic', 'Carpenter'],
-            places: ['School', 'Hospital', 'Church', 'Temple', 'Mosque', 'Park', 'Mall', 'Market', 'Shop', 'Store', 'Bank', 'Hotel', 'Restaurant', 'Cafe', 'Cinema', 'Library', 'Museum', 'Zoo', 'Airport', 'Station', 'Office', 'Factory', 'Gym', 'Stadium', 'Theater'],
-            family: ['Mother', 'Father', 'Brother', 'Sister', 'Son', 'Daughter', 'Uncle', 'Aunt', 'Cousin', 'Grandma', 'Grandpa', 'Husband', 'Wife', 'Baby', 'Child'],
-            kitchen: ['Spoon', 'Fork', 'Knife', 'Plate', 'Bowl', 'Cup', 'Glass', 'Pot', 'Pan', 'Oven', 'Stove', 'Fridge', 'Microwave', 'Blender', 'Toaster', 'Kettle', 'Bottle', 'Jar', 'Tray', 'Napkin'],
-            objects: ['Book', 'Pen', 'Pencil', 'Paper', 'Bag', 'Box', 'Key', 'Lock', 'Door', 'Window', 'Ball', 'Toy', 'Doll', 'Kite', 'Balloon', 'Candle', 'Rope', 'Stick', 'Stone', 'Brick', 'Ladder', 'Bucket', 'Basket', 'Umbrella', 'Fan', 'Light', 'Bulb', 'Wire', 'Pipe', 'Wheel'],
-            music: ['Guitar', 'Piano', 'Drum', 'Violin', 'Flute', 'Trumpet', 'Saxophone', 'Harmonium', 'Tabla', 'Sitar', 'Harp', 'Bell', 'Horn', 'Whistle'],
-            tools: ['Hammer', 'Screwdriver', 'Wrench', 'Plier', 'Saw', 'Drill', 'Axe', 'Shovel', 'Rake', 'Brush', 'Broom', 'Mop', 'Scissors', 'Needle', 'Thread', 'Tape', 'Glue', 'Nail', 'Screw', 'Bolt'],
-            electronics: ['Phone', 'TV', 'Computer', 'Laptop', 'Tablet', 'Camera', 'Radio', 'Speaker', 'Headphone', 'Charger', 'Battery', 'Remote', 'Printer', 'Mouse', 'Keyboard'],
-            buildings: ['House', 'Building', 'Tower', 'Castle', 'Palace', 'Hut', 'Tent', 'Bridge', 'Tunnel', 'Wall', 'Fence', 'Gate', 'Roof', 'Floor', 'Stairs'],
-            time: ['Day', 'Night', 'Morning', 'Evening', 'Noon', 'Midnight', 'Dawn', 'Dusk', 'Hour', 'Minute', 'Second', 'Week', 'Month', 'Year', 'Today', 'Tomorrow', 'Yesterday'],
-            weather: ['Sunny', 'Rainy', 'Cloudy', 'Windy', 'Stormy', 'Snowy', 'Foggy', 'Hot', 'Cold', 'Warm', 'Cool', 'Humid', 'Dry'],
-            emotions: ['Happy', 'Sad', 'Angry', 'Scared', 'Excited', 'Tired', 'Bored', 'Surprised', 'Confused', 'Proud', 'Shy', 'Nervous', 'Calm', 'Worried', 'Jealous'],
-            shapes: ['Circle', 'Square', 'Triangle', 'Rectangle', 'Star', 'Heart', 'Diamond', 'Oval', 'Cube', 'Sphere', 'Cone', 'Cylinder', 'Pyramid'],
-            countries: ['India', 'China', 'Japan', 'Korea', 'America', 'Canada', 'Brazil', 'Mexico', 'France', 'Germany', 'Italy', 'Spain', 'Russia', 'Australia', 'England', 'Egypt', 'Dubai', 'Singapore', 'Thailand', 'Nepal'],
-            movies: ['Batman', 'Superman', 'Spiderman', 'Ironman', 'Thor', 'Hulk', 'Titanic', 'Avatar', 'Frozen', 'Moana', 'Shrek', 'Minions', 'Tarzan', 'Aladdin', 'Cinderella'],
-            games: ['Chess', 'Carrom', 'Ludo', 'Cards', 'Puzzle', 'Dice', 'Domino', 'Monopoly', 'Jenga', 'Uno'],
-            insects: ['Ant', 'Bee', 'Butterfly', 'Mosquito', 'Fly', 'Spider', 'Cockroach', 'Grasshopper', 'Ladybug', 'Beetle', 'Worm', 'Caterpillar', 'Dragonfly', 'Moth', 'Cricket'],
-            flowers: ['Rose', 'Lily', 'Tulip', 'Sunflower', 'Lotus', 'Jasmine', 'Orchid', 'Daisy', 'Marigold', 'Hibiscus', 'Lavender', 'Dahlia', 'Iris', 'Daffodil', 'Poppy']
+        
+        // Track used word pairs to prevent repetition
+        let usedWordPairs = new Set();
+        
+        // Load used pairs from storage
+        function loadUsedPairs() {
+            const stored = localStorage.getItem('spyGameUsedPairs');
+            if (stored) {
+                usedWordPairs = new Set(JSON.parse(stored));
+            }
+        }
+        
+        // Save used pairs to storage
+        function saveUsedPairs() {
+            localStorage.setItem('spyGameUsedPairs', JSON.stringify([...usedWordPairs]));
+        }
+        
+        // Clear used pairs (reset)
+        function clearUsedPairs() {
+            usedWordPairs.clear();
+            localStorage.removeItem('spyGameUsedPairs');
+        }
+        
+        // ==========================================
+        // SIMPLE WORD DATABASE - Only Common Everyday Words
+        // Words that EVERYONE knows - no obscure/technical words
+        // ==========================================
+        const SIMPLE_WORDS = {
+            // Animals - Common ones everyone knows
+            animals: ['Dog', 'Cat', 'Bird', 'Fish', 'Cow', 'Horse', 'Pig', 'Chicken', 'Duck', 'Goat', 'Sheep', 'Lion', 'Tiger', 'Bear', 'Monkey', 'Elephant', 'Rabbit', 'Mouse', 'Frog', 'Snake', 'Turtle', 'Ant', 'Bee', 'Crow', 'Parrot', 'Camel', 'Donkey', 'Deer', 'Fox', 'Wolf', 'Rat', 'Bat', 'Owl', 'Eagle', 'Hen', 'Crab', 'Whale', 'Shark', 'Dolphin', 'Snail', 'Spider', 'Fly', 'Butterfly', 'Lizard', 'Crocodile', 'Zebra', 'Giraffe', 'Kangaroo', 'Panda', 'Gorilla', 'Squirrel', 'Lamb', 'Puppy', 'Kitten', 'Pigeon', 'Swan', 'Goose', 'Turkey', 'Bull'],
+            
+            // Fruits - Common ones
+            fruits: ['Apple', 'Banana', 'Orange', 'Mango', 'Grape', 'Watermelon', 'Coconut', 'Lemon', 'Pineapple', 'Papaya', 'Cherry', 'Strawberry', 'Peach', 'Pear', 'Melon'],
+            
+            // Vegetables - Common ones
+            vegetables: ['Potato', 'Tomato', 'Onion', 'Carrot', 'Cabbage', 'Spinach', 'Peas', 'Beans', 'Corn', 'Cucumber', 'Pumpkin', 'Garlic', 'Ginger', 'Chili', 'Cauliflower', 'Broccoli', 'Lettuce', 'Mushroom'],
+            
+            // Body Parts - Common ones
+            body: ['Hand', 'Foot', 'Head', 'Eye', 'Ear', 'Nose', 'Mouth', 'Teeth', 'Tongue', 'Hair', 'Face', 'Neck', 'Arm', 'Leg', 'Finger', 'Knee', 'Back', 'Stomach', 'Heart', 'Brain', 'Skin', 'Bone', 'Blood', 'Nail', 'Thumb', 'Elbow', 'Shoulder', 'Chest', 'Toe', 'Cheek', 'Chin', 'Lip'],
+            
+            // Family & People - Common ones
+            family: ['Mother', 'Father', 'Brother', 'Sister', 'Baby', 'Grandma', 'Grandpa', 'Uncle', 'Aunt', 'Son', 'Daughter', 'Friend', 'Teacher', 'Student', 'Child', 'Parent', 'Husband', 'Wife', 'Cousin', 'Boy', 'Girl', 'Man', 'Woman', 'Kid', 'Family', 'People', 'Person', 'Lady'],
+            
+            // Home Items - Common ones
+            home: ['Chair', 'Table', 'Bed', 'Door', 'Window', 'Fan', 'Light', 'TV', 'Phone', 'Clock', 'Mirror', 'Pillow', 'Blanket', 'Bucket', 'Broom', 'Soap', 'Towel', 'Comb', 'Toothbrush', 'Key', 'Lock', 'Shelf', 'Sofa', 'Carpet', 'Curtain', 'Mat', 'Lamp', 'Bulb', 'Switch', 'Wire', 'Rope', 'Needle', 'Button', 'Hook', 'Stool', 'Swing', 'Mattress', 'Umbrella', 'Candle', 'Toy', 'Doll', 'Ball', 'Book'],
+            
+            // Kitchen Items - Common ones
+            kitchen: ['Plate', 'Glass', 'Spoon', 'Cup', 'Bowl', 'Pot', 'Pan', 'Knife', 'Fork', 'Bottle', 'Fridge', 'Stove', 'Water', 'Rice', 'Salt', 'Sugar', 'Oil', 'Milk', 'Tea', 'Coffee', 'Mug', 'Jug', 'Jar', 'Box', 'Tin', 'Can', 'Lid', 'Tray', 'Dish', 'Oven', 'Sink', 'Tap', 'Dustbin', 'Basket', 'Cloth', 'Sponge'],
+            
+            // Food Items - Common ones everyone knows
+            food: ['Rice', 'Bread', 'Egg', 'Milk', 'Butter', 'Cheese', 'Pizza', 'Burger', 'Cake', 'Biscuit', 'Chocolate', 'Ice Cream', 'Soup', 'Salad', 'Sandwich', 'Noodles', 'Chicken', 'Fish', 'Meat', 'Pasta', 'Chips', 'Popcorn', 'Cookie', 'Donut', 'Pancake', 'Jam', 'Honey', 'Sauce', 'Pickle'],
+            
+            // Clothes - Common ones
+            clothes: ['Shirt', 'Pant', 'Dress', 'Shoe', 'Sock', 'Hat', 'Cap', 'Jacket', 'Sweater', 'Jeans', 'Shorts', 'Skirt', 'Belt', 'Watch', 'Ring', 'Bag', 'Tie', 'Coat', 'Sandal', 'Slipper', 'Boot', 'T-Shirt', 'Suit', 'Scarf', 'Glove', 'Earring', 'Necklace', 'Bracelet', 'Glasses', 'Sunglasses', 'Wallet', 'Backpack'],
+            
+            // Nature - Common ones
+            nature: ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Water', 'Fire', 'Air', 'Tree', 'Flower', 'Grass', 'Stone', 'Sand', 'River', 'Mountain', 'Sea', 'Sky', 'Earth', 'Snow', 'Wind', 'Ocean', 'Lake', 'Pond', 'Forest', 'Garden', 'Field', 'Farm', 'Desert', 'Island', 'Beach', 'Hill', 'Cave', 'Rock', 'Mud', 'Dust', 'Ice', 'Fog', 'Thunder', 'Lightning', 'Rainbow', 'Sunrise', 'Sunset', 'Shadow', 'Storm'],
+            
+            // Vehicles - Common ones
+            vehicles: ['Car', 'Bus', 'Bike', 'Train', 'Plane', 'Boat', 'Ship', 'Truck', 'Cycle', 'Scooter', 'Taxi', 'Van', 'Jeep', 'Ambulance', 'Tractor', 'Cart', 'Helicopter', 'Rocket'],
+            
+            // Colors - Common ones
+            colors: ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Pink', 'Purple', 'Black', 'White', 'Brown', 'Gray', 'Golden', 'Silver'],
+            
+            // Numbers - Common ones
+            numbers: ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Twenty', 'Fifty', 'Hundred', 'Thousand', 'Zero', 'First', 'Second', 'Third', 'Last', 'Half', 'Double'],
+            
+            // Time - Common ones
+            time: ['Day', 'Night', 'Morning', 'Evening', 'Today', 'Tomorrow', 'Yesterday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Week', 'Month', 'Year', 'Hour', 'Minute', 'Birthday', 'Summer', 'Winter', 'Clock', 'Watch', 'Calendar'],
+            
+            // Places - Common ones
+            places: ['Home', 'School', 'Shop', 'Market', 'Hospital', 'Temple', 'Park', 'Garden', 'Office', 'Bank', 'Hotel', 'Restaurant', 'Cinema', 'Mall', 'Zoo', 'Gym', 'Beach', 'Farm', 'Village', 'City', 'Town', 'Country', 'Street', 'Road', 'Bridge', 'Station', 'Airport', 'Factory', 'Library', 'Church', 'Palace', 'Castle', 'Tower', 'Building', 'House', 'Flat', 'Hut', 'Tent', 'Camp', 'Theater', 'Stadium'],
+            
+            // School Items - Common ones
+            school: ['Book', 'Pen', 'Pencil', 'Paper', 'Bag', 'Eraser', 'Ruler', 'Desk', 'Board', 'Chalk', 'Map', 'Globe', 'Bell', 'Flag', 'Notebook', 'Dictionary', 'Magazine', 'Diary', 'Letter', 'Card', 'Paint', 'Brush', 'Scissors', 'Glue', 'Tape', 'File', 'Folder', 'Calculator', 'Computer', 'Laptop', 'Screen', 'Printer'],
+            
+            // Sports - Common ones
+            sports: ['Ball', 'Bat', 'Cricket', 'Football', 'Hockey', 'Tennis', 'Swimming', 'Running', 'Racing', 'Kite', 'Chess', 'Cards', 'Basketball', 'Volleyball', 'Badminton', 'Boxing', 'Wrestling', 'Cycling', 'Skating', 'Fishing', 'Camping', 'Yoga', 'Gym', 'Exercise', 'Jogging', 'Walking', 'Match', 'Game', 'Goal', 'Team', 'Player', 'Coach', 'Win', 'Lose'],
+            
+            // Actions - Common ones
+            actions: ['Dance', 'Song', 'Music', 'Sleep', 'Dream', 'Work', 'Play', 'Study', 'Walk', 'Run', 'Jump', 'Swim', 'Fight', 'Love', 'Eat', 'Drink', 'Cook', 'Clean', 'Wash', 'Bath', 'Open', 'Close', 'Push', 'Pull', 'Throw', 'Catch', 'Hit', 'Kick', 'Hug', 'Kiss', 'Wave', 'Clap', 'Sing', 'Shout', 'Talk', 'Chat', 'Give', 'Take', 'Send', 'Buy', 'Sell', 'Pay', 'Save', 'Share', 'Read', 'Write', 'Draw', 'Paint', 'Cut', 'Break'],
+            
+            // Weather - Common ones
+            weather: ['Hot', 'Cold', 'Warm', 'Cool', 'Sunny', 'Rainy', 'Cloudy', 'Windy', 'Foggy', 'Dry', 'Wet', 'Snowy'],
+            
+            // Jobs - Common ones
+            jobs: ['Doctor', 'Teacher', 'Driver', 'Farmer', 'Police', 'Soldier', 'Cook', 'Painter', 'Singer', 'Actor', 'Player', 'Worker', 'Guard', 'Barber', 'Nurse', 'Engineer', 'Lawyer', 'King', 'Queen', 'Prince', 'Princess', 'Hero', 'Thief', 'Pilot', 'Captain', 'Sailor', 'Fisherman', 'Hunter', 'Gardener', 'Cleaner', 'Plumber', 'Mechanic', 'Carpenter', 'Tailor', 'Baker', 'Milkman', 'Postman', 'Waiter', 'Chef', 'Manager', 'Owner', 'Cashier'],
+            
+            // Devices - Common ones
+            devices: ['Phone', 'TV', 'Computer', 'Radio', 'Camera', 'Fan', 'AC', 'Fridge', 'Iron', 'Heater', 'Cooler', 'Charger', 'Remote', 'Speaker', 'Headphone', 'Keyboard', 'Mouse', 'Monitor', 'Printer', 'Battery', 'Bulb', 'Tablet', 'Laptop'],
+            
+            // Feelings - Common ones
+            feelings: ['Happy', 'Sad', 'Angry', 'Scared', 'Tired', 'Hungry', 'Thirsty', 'Sleepy', 'Sick', 'Good', 'Bad', 'Nice', 'Funny', 'Boring', 'Excited', 'Surprised', 'Confused', 'Proud', 'Sorry', 'Loved', 'Worried', 'Relaxed', 'Calm', 'Nervous', 'Shy', 'Brave', 'Strong', 'Weak'],
+            
+            // Size & Shape - Common ones
+            sizes: ['Big', 'Small', 'Tall', 'Short', 'Fat', 'Thin', 'Long', 'Round', 'Square', 'Circle', 'Straight', 'Heavy', 'Light', 'Fast', 'Slow', 'Wide', 'High', 'Low', 'Flat', 'Heart', 'Star', 'Line', 'Dot', 'Top', 'Bottom', 'Left', 'Right', 'Front', 'Back'],
+            
+            // Materials - Common ones
+            materials: ['Wood', 'Metal', 'Glass', 'Plastic', 'Paper', 'Cloth', 'Leather', 'Cotton', 'Rubber', 'Gold', 'Silver', 'Iron', 'Steel', 'Brick', 'Stone', 'Sand', 'Clay', 'Mud', 'Ice', 'Oil', 'Petrol', 'Water', 'Fire'],
+            
+            // Events - Common ones
+            events: ['Birthday', 'Wedding', 'Party', 'Holiday', 'Festival', 'Christmas', 'New Year', 'Picnic', 'Trip', 'Vacation', 'Meeting', 'Match', 'Concert', 'Show', 'Fair', 'Parade', 'Election', 'Vote', 'Ceremony', 'Race', 'Speech', 'Dance', 'Movie', 'Photo', 'Picture', 'Gift', 'Present', 'Surprise'],
+            
+            // Directions - Common ones
+            directions: ['Up', 'Down', 'Left', 'Right', 'Front', 'Back', 'Inside', 'Outside', 'Near', 'Far', 'Top', 'Bottom', 'Middle', 'Corner', 'North', 'South', 'East', 'West', 'Above', 'Below', 'Behind', 'Here', 'There'],
+            
+            // Tools - Common ones
+            tools: ['Hammer', 'Screwdriver', 'Saw', 'Drill', 'Axe', 'Shovel', 'Wheel', 'Chain', 'Screw', 'Nail', 'Pin', 'Hook', 'Vacuum', 'Pump', 'Motor', 'Engine', 'Pipe', 'Hose', 'Ladder', 'Brush', 'Broom', 'Scissors', 'Knife', 'Rope'],
+            
+            // Music - Common ones
+            music: ['Guitar', 'Piano', 'Drum', 'Violin', 'Flute', 'Bell', 'Horn', 'Whistle'],
+            
+            // Containers - Common ones
+            containers: ['Box', 'Bag', 'Basket', 'Bucket', 'Bin', 'Can', 'Jar', 'Bottle', 'Jug', 'Pot', 'Bowl', 'Cup', 'Glass', 'Mug', 'Plate', 'Tray', 'Dish', 'Drawer', 'Shelf', 'Rack', 'Case', 'Cover', 'Lid', 'Pack'],
+            
+            // Money - Common ones
+            money: ['Money', 'Cash', 'Coin', 'Note', 'Bill', 'Change', 'Price', 'Cost', 'Discount', 'Sale', 'Profit', 'Loss', 'Income', 'Saving', 'Loan', 'Debt', 'Bank', 'ATM'],
+            
+            // Health - Common ones
+            health: ['Health', 'Fever', 'Cold', 'Cough', 'Pain', 'Wound', 'Injury', 'Cut', 'Burn', 'Medicine', 'Tablet', 'Injection', 'Doctor', 'Hospital', 'Diet', 'Exercise', 'Rest', 'Sleep'],
+            
+            // Technology - Common ones
+            technology: ['Internet', 'Website', 'App', 'Game', 'Chat', 'Email', 'Message', 'Call', 'Video', 'Photo', 'Music', 'Movie', 'Download', 'Upload', 'Password', 'Account', 'Search', 'Link', 'Screen', 'Button']
         };
 
-        // Generate a random word pair from same category
+        // Generate a unique word pair that hasn't been used
         function generateSimpleWordPair() {
-            const categories = Object.keys(WORD_BANKS);
-            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-            const words = WORD_BANKS[randomCategory];
+            loadUsedPairs();
             
-            // Pick two different random words from same category
-            const index1 = Math.floor(Math.random() * words.length);
-            let index2 = Math.floor(Math.random() * words.length);
-            while (index2 === index1) {
-                index2 = Math.floor(Math.random() * words.length);
+            const categories = Object.keys(SIMPLE_WORDS);
+            let attempts = 0;
+            const maxAttempts = 5000;
+            
+            while (attempts < maxAttempts) {
+                // Pick random category
+                const category = categories[Math.floor(Math.random() * categories.length)];
+                const words = SIMPLE_WORDS[category];
+                
+                // Pick two different words
+                const index1 = Math.floor(Math.random() * words.length);
+                let index2 = Math.floor(Math.random() * words.length);
+                while (index2 === index1 && words.length > 1) {
+                    index2 = Math.floor(Math.random() * words.length);
+                }
+                
+                const word1 = words[index1];
+                const word2 = words[index2];
+                
+                // Create unique key for this pair
+                const pairKey = [word1, word2].sort().join('|');
+                
+                // Check if already used
+                if (!usedWordPairs.has(pairKey)) {
+                    usedWordPairs.add(pairKey);
+                    saveUsedPairs();
+                    
+                    // Randomly assign common and spy
+                    if (Math.random() > 0.5) {
+                        return { common: word1, spy: word2 };
+                    } else {
+                        return { common: word2, spy: word1 };
+                    }
+                }
+                
+                attempts++;
             }
             
-            // Randomly decide which is common and which is spy
-            if (Math.random() > 0.5) {
-                return { common: words[index1], spy: words[index2] };
-            } else {
-                return { common: words[index2], spy: words[index1] };
+            // If all pairs exhausted, reset and try again
+            console.log('All word pairs used! Resetting...');
+            clearUsedPairs();
+            return generateSimpleWordPair();
+        }
+        
+        // Calculate total possible combinations
+        function getTotalCombinations() {
+            let total = 0;
+            for (const category of Object.keys(SIMPLE_WORDS)) {
+                const n = SIMPLE_WORDS[category].length;
+                total += (n * (n - 1)) / 2; // nC2 combinations per category
             }
+            return total;
+        }
+        
+        // Get remaining unused pairs count
+        function getRemainingPairs() {
+            loadUsedPairs();
+            return getTotalCombinations() - usedWordPairs.size;
         }
 
         // ==========================================
@@ -1933,8 +2102,7 @@
             playSound('click');
             
             if (mode === 'offline') {
-                // Clear previous player data for fresh start
-                GameState.players = [];
+                // Go to setup screen (players will be empty for new game)
                 goToScreen('setupScreen');
                 updatePlayerInputs();
             } else {
@@ -2421,13 +2589,13 @@
             revealCard.classList.remove('flipped');
             document.getElementById('nextPlayerBtn').disabled = true;
             
+            // Hide role label and keep same styling for both spy and citizen
+            revealBack.classList.remove('spy');
+            revealRole.textContent = '';
+            
             if (isSpy) {
-                revealBack.classList.add('spy');
-                revealRole.textContent = '🕵️ SPY';
                 revealWord.textContent = GameState.spyWord;
             } else {
-                revealBack.classList.remove('spy');
-                revealRole.textContent = '👤 CITIZEN';
                 revealWord.textContent = GameState.commonWord;
             }
             
@@ -2605,22 +2773,28 @@
             const spy = GameState.players[GameState.spyIndex];
             const N = GameState.players.length;
             
-            // Count votes received by each player
+            // Count votes received by each player (spy's vote does not count)
             const votesReceived = {};
             GameState.players.forEach(p => votesReceived[p.id] = 0);
             
-            Object.values(GameState.votes).forEach(votedFor => {
+            // Only count votes from non-spy players
+            Object.entries(GameState.votes).forEach(([voterId, votedFor]) => {
+                // Skip counting the spy's vote
+                if (voterId === spy.id) return;
                 votesReceived[votedFor]++;
             });
             
             const spyVotes = votesReceived[spy.id];
+            const nonSpyVoters = N - 1; // All players except spy can vote
+            const playersWhoDidntVoteSpy = nonSpyVoters - spyVotes;
             
             // Calculate scores based on the rules
             if (spyVotes >= 1) {
                 // CASE 1: Spy received at least 1 vote
                 
-                // Spy loses points equal to votes received
-                GameState.roundScores[spy.id] = -spyVotes;
+                // Spy gets +1 for each player who didn't vote for them, -1 for each who did
+                // Formula: (players who didn't vote spy) - (players who voted spy)
+                GameState.roundScores[spy.id] = playersWhoDidntVoteSpy - spyVotes;
                 
                 // For each non-spy player
                 GameState.players.forEach(player => {
@@ -2775,6 +2949,30 @@
             document.getElementById('modalOverlay').classList.add('hidden');
         }
 
+        function showChangeWordModal() {
+            playSound('click');
+            document.getElementById('changeWordModalOverlay').classList.remove('hidden');
+        }
+
+        function closeChangeWordModal() {
+            playSound('click');
+            document.getElementById('changeWordModalOverlay').classList.add('hidden');
+        }
+
+        function confirmChangeWord() {
+            playSound('click');
+            closeChangeWordModal();
+            
+            // Stop the discussion timer
+            if (discussionTimer) {
+                clearInterval(discussionTimer);
+                discussionTimer = null;
+            }
+            
+            // Go back to word selection screen
+            goToScreen('wordSetupScreen');
+        }
+
         function confirmExit() {
             playSound('click');
             closeModal();
@@ -2814,18 +3012,70 @@
             `;
             
             hideChat();
+            updateHomeScreenButtons();
             goToScreen('homeScreen');
             updatePlayerInputs();
+        }
+
+        // ==========================================
+        // CONTINUE GAME / NEW GAME FUNCTIONS
+        // ==========================================
+        function continueGame() {
+            playSound('click');
+            // Players already loaded from storage, go directly to word setup
+            GameState.mode = 'offline';
+            goToScreen('wordSetupScreen');
+        }
+
+        function startNewGame() {
+            playSound('click');
+            
+            // Clear everything from localStorage
+            clearStorage();
+            
+            // Reset all game state
+            GameState.mode = 'offline';
+            GameState.roomCode = null;
+            GameState.isHost = false;
+            GameState.players = [];
+            GameState.spyIndex = -1;
+            GameState.commonWord = '';
+            GameState.spyWord = '';
+            GameState.votes = {};
+            GameState.roundScores = {};
+            GameState.totalScores = {};
+            GameState.round = 1;
+            GameState.gamePhase = 'setup';
+            
+            // Reset UI elements
+            document.getElementById('wordPreview').classList.add('hidden');
+            document.getElementById('startRoundBtn').disabled = true;
+            document.getElementById('commonWordInput').value = '';
+            document.getElementById('spyWordInput').value = '';
+            
+            // Update home screen buttons
+            updateHomeScreenButtons();
+            
+            // Go to setup screen for new game
+            goToScreen('setupScreen');
+            updatePlayerInputs();
+        }
+
+        function updateHomeScreenButtons() {
+            const hasSavedGame = GameState.players && GameState.players.length > 0;
+            
+            document.getElementById('newGameButtons').classList.toggle('hidden', hasSavedGame);
+            document.getElementById('continueGameButtons').classList.toggle('hidden', !hasSavedGame);
         }
 
         // ==========================================
         // INITIALIZATION
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Check for saved game
-            if (loadFromStorage() && GameState.players.length > 0) {
-                console.log('Found saved game data');
-            }
+            // Check for saved game and update buttons
+            const hasSavedData = loadFromStorage();
+            console.log('Saved data found:', hasSavedData, 'Players:', GameState.players.length);
+            updateHomeScreenButtons();
             
             // Initialize player inputs
             updatePlayerInputs();
@@ -2838,6 +3088,27 @@
                     }
                 });
             });
+        });
+
+        // Auto-save when page is closed or refreshed
+        window.addEventListener('beforeunload', () => {
+            if (GameState.players.length > 0) {
+                saveToStorage();
+            }
+        });
+
+        // Also save when page visibility changes (user switches tabs)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && GameState.players.length > 0) {
+                saveToStorage();
+            }
+        });
+
+        // Also save periodically when page loses focus
+        window.addEventListener('blur', () => {
+            if (GameState.players.length > 0) {
+                saveToStorage();
+            }
         });
 
         // ==========================================
